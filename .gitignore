@@ -1,0 +1,20 @@
+# Dataset (downloaded automatically, see README)
+data/
+
+# Trained models and generated images (reproducible by running the scripts)
+*.pt
+*.pth
+train_samples.png
+test_samples.png
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.python-version
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
