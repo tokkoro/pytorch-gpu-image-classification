@@ -1,0 +1,97 @@
+# Valohai configuration: https://docs.valohai.com/valohai-yaml.md
+#
+# The image has PyTorch, torchvision, NumPy and CUDA preinstalled, so the
+# commands only add matplotlib (installing all of requirements.txt could make
+# pip re-resolve torch's CUDA dependencies). The image uses Ubuntu's system
+# Python, so pip needs --break-system-packages.
+
+- step:
+    name: data-preview
+    description: Load CIFAR10 from the input and save a grid of sample training images.
+    image: pytorch/pytorch:2.14.1-cuda12.6-cudnn9-runtime
+    command:
+      - pip install --break-system-packages matplotlib
+      - python step1_data.py {parameters}
+    parameters:
+      - name: batch_size
+        type: integer
+        default: 4
+        description: Number of sample images in the grid
+      - name: num_workers
+        type: integer
+        default: 2
+        description: DataLoader worker processes
+    inputs:
+      - name: cifar10
+        description: CIFAR10 python version (cifar-10-python.tar.gz)
+        default: https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
+
+- step:
+    name: train
+    description: Train the CNN on CIFAR10 and save the model as cifar_net.pt.
+    image: pytorch/pytorch:2.14.1-cuda12.6-cudnn9-runtime
+    command:
+      - pip install --break-system-packages matplotlib
+      - python step2_train.py {parameters}
+    parameters:
+      - name: epochs
+        type: integer
+        default: 2
+        min: 1
+      - name: learning_rate
+        type: float
+        default: 0.001
+      - name: momentum
+        type: float
+        default: 0.9
+      - name: batch_size
+        type: integer
+        default: 4
+        min: 1
+      - name: num_workers
+        type: integer
+        default: 2
+        description: DataLoader worker processes
+      - name: device
+        type: string
+        default: auto
+        description: "'auto' (GPU if available), 'cuda' or 'cpu'"
+    inputs:
+      - name: cifar10
+        description: CIFAR10 python version (cifar-10-python.tar.gz)
+        default: https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
+
+- step:
+    name: test
+    description: Evaluate a trained model on the 10,000 CIFAR10 test images.
+    image: pytorch/pytorch:2.14.1-cuda12.6-cudnn9-runtime
+    command:
+      - pip install --break-system-packages matplotlib
+      - python step3_test.py {parameters}
+    parameters:
+      - name: batch_size
+        type: integer
+        default: 4
+        min: 1
+      - name: num_workers
+        type: integer
+        default: 2
+        description: DataLoader worker processes
+    inputs:
+      - name: cifar10
+        description: CIFAR10 python version (cifar-10-python.tar.gz)
+        default: https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
+      - name: model
+        description: Trained model (cifar_net.pt from a train execution)
+
+- pipeline:
+    name: train-and-test
+    nodes:
+      - name: train
+        type: execution
+        step: train
+      - name: test
+        type: execution
+        step: test
+    edges:
+      - [train.output.cifar_net.pt, test.input.model]
